@@ -1,4 +1,5 @@
 streamlit>=1.20.0
 numpy>=1.23.0
 matplotlib>=3.5.0
+seaborn
 scipy>=1.9.0
