@@ -13,12 +13,13 @@ sns.axes_style(style="white")
 # -------------------------
 
 class MigratingCell:
-    def __init__(self, mode="Random", persistency=0.9, bias_direction=(1,0), step_size=1.0):
+    def __init__(self, mode="Random", persistency=0.9, bias_direction=(1,0), step_size=1.0, bias_strength=1.0):
         """
         mode: "Random", "Persistent", "Biased", or "Bias-Persistent"
         persistency: for "Persistent" and "Bias-Persistent" modes, the probability to retain the previous angle.
         bias_direction: a tuple (bx, by) for biased motions.
         step_size: step size per update.
+        bias_strength: concentration parameter for the bias direction (higher means stronger bias).
         """
         self.mode = mode
         self.persistency = persistency
@@ -26,6 +27,7 @@ class MigratingCell:
         if np.linalg.norm(self.bias_direction) != 0:
             self.bias_direction = self.bias_direction / np.linalg.norm(self.bias_direction)
         self.step_size = step_size
+        self.bias_strength = bias_strength
         self.position = np.array([0.0, 0.0])
         # Initialize with a random angle (for all modes)
         self.angle = np.random.uniform(0, 2*np.pi)
@@ -45,7 +47,7 @@ class MigratingCell:
                 self.angle = np.random.uniform(0, 2*np.pi)
             else:
                 bias_angle = np.arctan2(self.bias_direction[1], self.bias_direction[0])
-                self.angle = vonmises.rvs(kappa=4, loc=bias_angle)
+                self.angle = vonmises.rvs(kappa=self.bias_strength, loc=bias_angle)
         elif self.mode == "Bias-Persistent":
             # With probability persistency, keep previous angle;
             # else choose a new biased angle as in "Biased" mode.
@@ -54,7 +56,7 @@ class MigratingCell:
                     self.angle = np.random.uniform(0, 2*np.pi)
                 else:
                     bias_angle = np.arctan2(self.bias_direction[1], self.bias_direction[0])
-                    self.angle = vonmises.rvs(kappa=4, loc=bias_angle)
+                    self.angle = vonmises.rvs(kappa=self.bias_strength, loc=bias_angle)
         else:
             raise ValueError("Invalid mode")
         
@@ -75,14 +77,15 @@ class MigratingCell:
         return angles
 
 class MigrationSimulation:
-    def __init__(self, num_cells=50, mode="Random", persistency=0.9, bias_direction=(1,0), step_size=1.0, num_steps=200):
+    def __init__(self, num_cells=50, mode="Random", persistency=0.9, bias_direction=(1,0), step_size=1.0, bias_strength=1.0, num_steps=200):
         self.num_cells = num_cells
         self.mode = mode
         self.persistency = persistency
         self.bias_direction = bias_direction
         self.step_size = step_size
+        self.bias_strength = bias_strength
         self.num_steps = num_steps
-        self.cells = [MigratingCell(mode, persistency, bias_direction, step_size) for _ in range(num_cells)]
+        self.cells = [MigratingCell(mode, persistency, bias_direction, step_size, bias_strength) for _ in range(num_cells)]
     
     def run(self):
         for step in range(self.num_steps):
@@ -152,8 +155,10 @@ if mode in ["Biased", "Bias-Persistent"]:
     bias_x = st.sidebar.number_input("Bias X Component", value=1.0)
     bias_y = st.sidebar.number_input("Bias Y Component", value=0.0)
     bias_direction = (bias_x, bias_y)
+    bias_strength = st.sidebar.slider("Bias Strength", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
 else:
     bias_direction = (0, 0)
+    bias_strength = 1.0
 
 # Run Simulation Button
 if st.sidebar.button("Run Simulation"):
@@ -162,6 +167,7 @@ if st.sidebar.button("Run Simulation"):
                               persistency=persistency,
                               bias_direction=bias_direction,
                               step_size=step_size,
+                              bias_strength=bias_strength,
                               num_steps=num_steps)
     sim.run()
     trajectories = sim.get_all_trajectories()
@@ -233,4 +239,5 @@ if st.sidebar.button("Run Simulation"):
     # ax_speed.set_ylabel("Probability Density")
     # st.pyplot(fig_speed)
 
-# run the app with: streamlit run D:\David\endoderm_migration\cell_migration_simulation\streamlit_cell_migation_simulation.py
+# to run the app locally, type in the anaconda prompt: streamlit run D:\David\endoderm_migration\cell_migration_simulation\streamlit_cell_migation_simulation.py
+# make sure you are in the right env
