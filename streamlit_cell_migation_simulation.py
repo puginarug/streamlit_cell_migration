@@ -1,8 +1,12 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from matplotlib import cm
 from scipy.stats import vonmises
+
+# Set Seaborn style
+sns.axes_style(style="white")
 
 # -------------------------
 # Simulation Classes
@@ -29,24 +33,22 @@ class MigratingCell:
     
     def step(self):
         if self.mode == "Random":
-            # Always choose a new random angle
+            # Always choose a new random angle.
             self.angle = np.random.uniform(0, 2*np.pi)
         elif self.mode == "Persistent":
-            # With probability persistency, keep previous angle; otherwise choose uniformly at random.
+            # With probability persistency, keep previous angle; else choose uniformly at random.
             if np.random.rand() >= self.persistency:
                 self.angle = np.random.uniform(0, 2*np.pi)
         elif self.mode == "Biased":
-            # Always choose new angle from biased distribution
-            # Use a von Mises distribution with fixed concentration kappa (e.g. 4)
+            # Always choose new angle from a biased distribution.
             if np.linalg.norm(self.bias_direction) == 0:
-                # If no bias provided, fallback to uniform random.
                 self.angle = np.random.uniform(0, 2*np.pi)
             else:
                 bias_angle = np.arctan2(self.bias_direction[1], self.bias_direction[0])
                 self.angle = vonmises.rvs(kappa=4, loc=bias_angle)
         elif self.mode == "Bias-Persistent":
             # With probability persistency, keep previous angle;
-            # otherwise, choose a new biased angle as in "Biased" mode.
+            # else choose a new biased angle as in "Biased" mode.
             if np.random.rand() >= self.persistency:
                 if np.linalg.norm(self.bias_direction) == 0:
                     self.angle = np.random.uniform(0, 2*np.pi)
@@ -56,7 +58,6 @@ class MigratingCell:
         else:
             raise ValueError("Invalid mode")
         
-        # Compute displacement based on the chosen angle.
         delta = self.step_size * np.array([np.cos(self.angle), np.sin(self.angle)])
         self.position += delta
         self.trajectory.append(self.position.copy())
@@ -98,9 +99,11 @@ class MigrationSimulation:
         return [cell.get_angles() for cell in self.cells]
     
     def compute_MSD(self):
-        trajs = self.get_all_trajectories()
-        trajs = np.array(trajs)  # shape: (num_cells, num_steps+1, 2)
+        # Retrieve trajectories: shape (num_cells, num_steps+1, 2)
+        trajs = np.array(self.get_all_trajectories())
+        # Squared displacement from origin: x^2 + y^2 for each time step per cell.
         squared_displacements = np.sum(trajs**2, axis=2)
+        # Mean over all cells.
         MSD = np.mean(squared_displacements, axis=0)
         return MSD
 
@@ -152,7 +155,7 @@ if mode in ["Biased", "Bias-Persistent"]:
 else:
     bias_direction = (0, 0)
 
-# Run Simulation
+# Run Simulation Button
 if st.sidebar.button("Run Simulation"):
     sim = MigrationSimulation(num_cells=num_cells,
                               mode=mode,
@@ -166,7 +169,7 @@ if st.sidebar.button("Run Simulation"):
     # Panel 1: Final Migration Process
     st.header("Migration Process (Final Trajectories)")
     fig_proc, ax_proc = plt.subplots(figsize=(6, 6))
-    cmap = cm.get_cmap("viridis", num_cells)
+    cmap = cm.get_cmap("Set3", num_cells)
     for idx, traj in enumerate(trajectories):
         ax_proc.plot(traj[:,0], traj[:,1], marker="o", markersize=2, color=cmap(idx))
         ax_proc.plot(traj[0,0], traj[0,1], marker="s", color="black")  # starting point
@@ -175,47 +178,59 @@ if st.sidebar.button("Run Simulation"):
     ax_proc.set_xlabel("X Position")
     ax_proc.set_ylabel("Y Position")
     ax_proc.axis("equal")
+    # remove grid lines
+    ax_proc.grid(False)
+    # remove ticks
+    ax_proc.set_xticks([])
+    ax_proc.set_yticks([])
     st.pyplot(fig_proc)
     
     # Panel 2: Population Statistics
     st.header("Population Statistics")
     
-    # MSD Plot (log-log)
+    # 1. MSD Plot (log-log) with Seaborn
     MSD = sim.compute_MSD()
     time_array = np.arange(len(MSD))
     fig_msd, ax_msd = plt.subplots()
-    ax_msd.loglog(time_array[1:], MSD[1:], marker="o")
-    ax_msd.grid(which="major", linestyle="--")
+    sns.scatterplot(x=time_array[:], y=MSD[:], color="teal", ax=ax_msd, s=30)
+    ax_msd.grid(True, which='major')
     ax_msd.set_title("Mean Squared Displacement (MSD)")
     ax_msd.set_xlabel("Time Step (log scale)")
     ax_msd.set_ylabel("MSD (log scale)")
+    ax_msd.set_xscale("log")
+    ax_msd.set_yscale("log")
     st.pyplot(fig_msd)
     
-    # Velocity Autocorrelation
+    # 2. Velocity Autocorrelation Plot with Seaborn
     autocorr = sim.compute_velocity_autocorrelation()
     fig_auto, ax_auto = plt.subplots()
-    ax_auto.plot(autocorr, marker="o")
+    sns.scatterplot(x=np.arange(len(autocorr)), y=autocorr, color="teal", ax=ax_auto, s=30)
     ax_auto.set_title("Velocity Autocorrelation Function")
     ax_auto.set_xlabel("Lag")
     ax_auto.set_ylabel("Autocorrelation")
+    ax_proc.grid(False)
     st.pyplot(fig_auto)
     
-    # Angle Distribution Histogram
+    # 3. Turning Angle Distribution Histogram with Seaborn
     angles = sim.compute_angle_distribution()
     fig_angle, ax_angle = plt.subplots()
-    ax_angle.hist(angles, bins=30, density=True, color="skyblue", edgecolor="black")
+    sns.histplot(angles, bins=30, kde=False, color="skyblue", ax=ax_angle)
     mean_angle = np.mean(angles)
-    ax_angle.axvline(mean_angle, color='k', linestyle='dashed', linewidth=1)
+    ax_angle.axvline(mean_angle, color='red', linestyle='--', label=f'Mean: {mean_angle:.2f}')
+    ax_angle.legend()
+    ax_angle.grid(False)
     ax_angle.set_title("Turning Angle Distribution")
     ax_angle.set_xlabel("Angle (radians)")
     ax_angle.set_ylabel("Probability Density")
     st.pyplot(fig_angle)
     
-    # Velocity Distribution Histogram
-    speeds = sim.compute_speed_distribution()
-    fig_speed, ax_speed = plt.subplots()
-    ax_speed.hist(speeds, bins=30, density=True, color="lightgreen", edgecolor="black")
-    ax_speed.set_title("Instantaneous Speed Distribution")
-    ax_speed.set_xlabel("Speed")
-    ax_speed.set_ylabel("Probability Density")
-    st.pyplot(fig_speed)
+    # # 4. Instantaneous Speed Distribution Histogram with Seaborn
+    # speeds = sim.compute_speed_distribution()
+    # fig_speed, ax_speed = plt.subplots()
+    # sns.histplot(speeds, bins=30, kde=False, color="lightgreen", ax=ax_speed)
+    # ax_speed.set_title("Instantaneous Speed Distribution")
+    # ax_speed.set_xlabel("Speed")
+    # ax_speed.set_ylabel("Probability Density")
+    # st.pyplot(fig_speed)
+
+# run the app with: streamlit run D:\David\endoderm_migration\cell_migration_simulation\streamlit_cell_migation_simulation.py
