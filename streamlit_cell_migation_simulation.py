@@ -174,6 +174,42 @@ if st.sidebar.button("Run Simulation"):
     
     # Panel 1: Final Migration Process
     st.header("Migration Process (Final Trajectories)")
+    st.markdown("""
+    <style>
+    .tooltip {
+        position: relative;
+        display: inline-block;
+        cursor: pointer;
+    }
+
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        width: 200px;
+        background-color: black;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 5px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%; /* Position the tooltip above the text */
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+        opacity: 1;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    st.markdown("""
+    <div class="tooltip">❓
+      <span class="tooltiptext">This plot shows the final trajectories of all cells. Each line represents the path taken by a single cell from the start (black square) to the end (red star).</span>
+    </div>
+    """, unsafe_allow_html=True)
     fig_proc, ax_proc = plt.subplots(figsize=(6, 6))
     cmap = cm.get_cmap("Set3", num_cells)
     for idx, traj in enumerate(trajectories):
@@ -195,6 +231,11 @@ if st.sidebar.button("Run Simulation"):
     st.header("Population Statistics")
     
     # 1. MSD Plot (log-log) with Seaborn
+    st.markdown("""
+    <div class="tooltip">❓
+      <span class="tooltiptext">The Mean Squared Displacement (MSD) plot shows the average squared distance of the cells from their starting point over time. This provides information about the overall migration behavior.</span>
+    </div>
+    """, unsafe_allow_html=True)
     MSD = sim.compute_MSD()
     time_array = np.arange(len(MSD))
     fig_msd, ax_msd = plt.subplots()
@@ -208,6 +249,11 @@ if st.sidebar.button("Run Simulation"):
     st.pyplot(fig_msd)
     
     # 2. Velocity Autocorrelation Plot with Seaborn
+    st.markdown("""
+    <div class="tooltip">❓
+      <span class="tooltiptext">The Velocity Autocorrelation plot shows how the velocity of the cells at one time point is related to their velocity at a later time point. This helps in understanding the persistence in the movement.</span>
+    </div>
+    """, unsafe_allow_html=True)
     autocorr = sim.compute_velocity_autocorrelation()
     fig_auto, ax_auto = plt.subplots()
     sns.scatterplot(x=np.arange(len(autocorr)), y=autocorr, color="teal", ax=ax_auto, s=30)
@@ -218,6 +264,11 @@ if st.sidebar.button("Run Simulation"):
     st.pyplot(fig_auto)
     
     # 3. Turning Angle Distribution Histogram with Seaborn
+    st.markdown("""
+    <div class="tooltip">❓
+      <span class="tooltiptext">The Turning Angle Distribution plot shows the distribution of angles by which cells change their direction. This provides insight into the randomness or bias in their movement.</span>
+    </div>
+    """, unsafe_allow_html=True)
     angles = sim.compute_angle_distribution()
     fig_angle, ax_angle = plt.subplots()
     sns.histplot(angles, bins=30, kde=False, color="skyblue", ax=ax_angle)
@@ -239,5 +290,4 @@ if st.sidebar.button("Run Simulation"):
     # ax_speed.set_ylabel("Probability Density")
     # st.pyplot(fig_speed)
 
-# to run the app locally, type in the anaconda prompt: streamlit run D:\David\endoderm_migration\cell_migration_simulation\streamlit_cell_migation_simulation.py
-# make sure you are in the right env
+# run the app with: streamlit run D:\David\endoderm_migration\cell_migration_simulation\streamlit_cell_migation_simulation.py
