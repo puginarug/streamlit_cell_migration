@@ -257,7 +257,7 @@ if st.sidebar.button("Run Simulation"):
     autocorr = sim.compute_velocity_autocorrelation()
     fig_auto, ax_auto = plt.subplots()
     sns.scatterplot(x=np.arange(len(autocorr)), y=autocorr, color="teal", ax=ax_auto, s=30, edgecolor="none")
-    ax_auto.set_title("Velocity Autocorrelation Function")
+    ax_auto.set_title("(Normalized) Velocity Autocorrelation Function")
     ax_auto.set_xlabel("Lag")
     ax_auto.set_ylabel("Autocorrelation")
     ax_proc.grid(False)
